@@ -114,6 +114,7 @@ public class ProfileServiceImpl implements ProfileService {
         existingUser.setIsAccountVerified(true);
         existingUser.setVerifyOtp(null);
         existingUser.setVerifyOtpExpireAt(0L);
+
         userRepository.save(existingUser);
 
     }

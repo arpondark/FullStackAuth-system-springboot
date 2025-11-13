@@ -8,6 +8,7 @@ import com.arpon007.FullStackAuth.Service.ProfileService;
 import com.arpon007.FullStackAuth.Util.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -97,6 +98,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final AppUserDetaisService appUserDetaisService;
@@ -171,21 +173,29 @@ public class AuthController {
      * 1. JwtRequestFilter validates the JWT from the Authorization header or cookie
      * 2. If valid, it sets the authentication in SecurityContext with the user email
      * 3. This endpoint checks if SecurityContext has a valid authentication
-     * 4. If authentication exists AND is authenticated, user is logged in
+     * 4. If authentication exists AND is authenticated AND not anonymous, user is logged in
      * <p>
      * Testing:
-     * 1. WITHOUT login: GET /api/v1.1/auth/isAuthenticated → returns false
-     * 2. Login: POST /api/v1.1/auth/login with email + password → get token
+     * 1. WITHOUT login: GET /api/v1/auth/isAuthenticated → returns false
+     * 2. Login: POST /api/v1/auth/login with email + password → get token
      * 3. Copy token and add header: Authorization: Bearer <token>
-     * 4. Call endpoint: GET /api/v1.1/auth/isAuthenticated → returns true
+     * 4. Call endpoint: GET /api/v1/auth/isAuthenticated → returns true
      *
      * @return true if user is authenticated with a valid JWT, false otherwise
      */
     @GetMapping("/isAuthenticated")
-    public ResponseEntity<Boolean> isAuthenticated() {
+    public ResponseEntity<Map<String, Object>> isAuthenticated() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAuthenticated = auth != null && auth.isAuthenticated();
-        return ResponseEntity.ok(isAuthenticated);
+        boolean isAuthenticated = auth != null
+                && auth.isAuthenticated()
+                && !(auth.getPrincipal() instanceof String && auth.getPrincipal().equals("anonymousUser"));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("authenticated", isAuthenticated);
+        if (isAuthenticated) {
+            response.put("email", auth.getName());
+        }
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/send-reset-otp")
@@ -217,14 +227,13 @@ public class AuthController {
     }
 
     @PostMapping("/verify-otp")
-    public void verifyOtp(@RequestBody Map<String, Object> request, @CurrentSecurityContext(expression = "authentication?.name") String email) {
-        if(request.get("otp").toString() == null || request.get("otp").toString().isEmpty()){
+    public void verifyEmail(@RequestBody Map<String, Object> request, @CurrentSecurityContext(expression = "authentication?.name") String email) {
+        if(request.get("otp") == null){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP is required/Invalid");
-        }if(request.get("email") == null || request.get("email").toString().isEmpty()){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
         }
         try {
             profileService.verifyOtp(email, request.get("otp").toString());
+            log.info("OTP verified for email: {}", email);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
