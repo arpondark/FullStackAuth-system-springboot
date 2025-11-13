@@ -10,4 +10,5 @@ public interface ProfileService {
     ProfileResponse getProfile(String email);
 
     void sendResetOpt(String email);
+    void resetPassword(String email, String otp, String newPassword);
 }

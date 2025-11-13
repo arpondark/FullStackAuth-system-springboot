@@ -2,9 +2,11 @@ package com.arpon007.FullStackAuth.Controller;
 
 import com.arpon007.FullStackAuth.Io.AuthRequest;
 import com.arpon007.FullStackAuth.Io.AuthResponse;
+import com.arpon007.FullStackAuth.Io.ResetPasswordRequest;
 import com.arpon007.FullStackAuth.Service.AppUserDetaisService;
 import com.arpon007.FullStackAuth.Service.ProfileService;
 import com.arpon007.FullStackAuth.Util.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -101,6 +103,7 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final ProfileService profileService;
 
+
     /**
      * Authenticates user credentials and returns a JWT token.
      * <p>
@@ -185,7 +188,7 @@ public class AuthController {
         return ResponseEntity.ok(isAuthenticated);
     }
 
-    @PostMapping("/send-rest-otp")
+    @PostMapping("/send-reset-otp")
     public void sentResetOtp(@RequestParam String email) {
         try {
             profileService.sendResetOpt(email);
@@ -194,4 +197,13 @@ public class AuthController {
         }
 
     }
+
+    @PostMapping("/reset-password")
+     public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+         try {
+             profileService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
+         }catch (Exception e) {
+             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+         }
+     }
 }
