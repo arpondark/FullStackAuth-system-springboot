@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Data
@@ -21,7 +22,7 @@ public class ProfileServiceImpl implements ProfileService {
 
 
     private final UserRepository userRepository;
-
+    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -36,17 +37,29 @@ public class ProfileServiceImpl implements ProfileService {
 
     @Override
     public ProfileResponse getProfile(String email) {
-     UserEntity existUser=   userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException( "User not found: "+email));
-     return convertToUserResponse(existUser);
+        UserEntity existUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+        return convertToUserResponse(existUser);
     }
 
     @Override
     public void sendResetOpt(String email) {
-    UserEntity existingUser=     userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException( "User not found: "+email));
+        UserEntity existingUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
 
-    //genereate otp
+        //genereate otp
+        String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
+
+        //expire time
+        long expireTime = System.currentTimeMillis() + (1000 * 15 * 60); //15min
+        existingUser.setResetOtpExpireAt(expireTime);
+        existingUser.setResetOtp(otp);
+        userRepository.save(existingUser);
+        try {
+            emailService.sendResetOtpEmail(email, otp); //reset otp email
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private ProfileResponse convertToUserResponse(UserEntity newProfile) {
