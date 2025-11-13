@@ -37,4 +37,14 @@ public class EmailService {
         log.info("Password reset OTP email sent to {}", toEmail + " with OTP: " + otp);
     }
 
+    public void sentOtpEmail(String toEmail,String otp){
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(toEmail);
+        message.setSubject("OTP for verification");
+        message.setText("Hello,\n\nYour OTP for verification is: " + otp + "\n\nThis OTP is valid for 15 minutes.\n\nRegards,\nDrac Team");
+        mailSender.send(message);
+        log.info("OTP email sent to {}", toEmail + " with OTP: " + otp);
+    }
+
 }

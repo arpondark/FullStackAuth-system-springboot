@@ -199,11 +199,34 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-     public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-         try {
-             profileService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
-         }catch (Exception e) {
-             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-         }
-     }
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            profileService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    @PostMapping("/send-otp")
+    public void sendverifyOtp(@CurrentSecurityContext(expression = "authentication?.name") String email) {
+        try {
+            profileService.sentOtp(email);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    @PostMapping("/verify-otp")
+    public void verifyOtp(@RequestBody Map<String, Object> request, @CurrentSecurityContext(expression = "authentication?.name") String email) {
+        if(request.get("otp").toString() == null || request.get("otp").toString().isEmpty()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP is required/Invalid");
+        }if(request.get("email") == null || request.get("email").toString().isEmpty()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+        try {
+            profileService.verifyOtp(email, request.get("otp").toString());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
 }
