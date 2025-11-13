@@ -94,7 +94,7 @@ public class ProfileServiceImpl implements ProfileService {
         existingUser.setVerifyOtpExpireAt(expiryTime);
         userRepository.save(existingUser);
         try {
-            emailService.sentOtpEmail(existingUser.getEmail(), otp);
+            emailService.sendVerificationOtpEmail(existingUser.getEmail(), otp);
         } catch (Exception e) {
             e.printStackTrace();
         }
