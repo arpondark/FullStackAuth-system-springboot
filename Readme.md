@@ -28,7 +28,10 @@
 ### Key Features
 ✅ User registration and login with JWT authentication  
 ✅ **Token-based email verification** - Automatic verification links sent on signup  
+✅ **Resend verification email** - Users can request new verification tokens  
+✅ **Smart duplicate signup handling** - Helpful error messages with resend option  
 ✅ **Token-based password reset** - Secure reset links via email  
+✅ **Unverified login prevention** - Only verified users can login  
 ✅ Token logging to console for debugging  
 ✅ HTTP-only secure cookies for token storage  
 ✅ JWT token validation via filter  
@@ -197,6 +200,10 @@ If someone tries to modify a token without the secret key, the signature becomes
 │                                        ┌─ Verify credentials    │
 │                                        │  (AuthenticationManager)
 │                                        │                        │
+│                                        ├─ Check if account     │
+│                                        │  is verified          │
+│                                        │  (MUST be verified!)  │
+│                                        │                        │
 │                                        ├─ Load user details    │
 │                                        │  (AppUserDetailsService)
 │                                        │                        │
@@ -206,15 +213,22 @@ If someone tries to modify a token without the secret key, the signature becomes
 │                                        ├─ Create HTTP-only     │
 │                                        │  cookie               │
 │                                        │                        │
-│ 2. Receive token & cookie                                       │
+│ 2. Receive token & cookie (OR ERROR if unverified)             │
 │    ◄──────────────────────────────────                          │
+│    Success:                                                      │
 │    {                                                             │
 │      "email": "user@example.com",                               │
 │      "token": "eyJhbGc..."                                      │
 │    }                                                             │
 │    Set-Cookie: jwt=eyJhbGc...; HttpOnly; Path=/                │
 │                                                                   │
-│ 3. Store token & cookie                                         │
+│    OR Error (Unverified):                                       │
+│    {                                                             │
+│      "error": true,                                             │
+│      "message": "Account is not verified. Please verify..."     │
+│    }                                                             │
+│                                                                   │
+│ 3. Store token & cookie (if successful)                         │
 │    - Token: localStorage or sessionStorage (for manual sending) │
 │    - Cookie: Automatically managed by browser                   │
 │                                                                   │
@@ -334,11 +348,18 @@ Plus HTTP-only cookie: `jwt=eyJhbGc...; HttpOnly; Path=/; SameSite=Strict`
   "message": "Invalid credentials"
 }
 ```
-- `401 Unauthorized`: Account disabled
+- `401 Unauthorized`: Account disabled or not verified
 ```json
 {
   "error": true,
   "message": "Account is disabled"
+}
+```
+OR
+```json
+{
+  "error": true,
+  "message": "Account is not verified. Please verify your email first."
 }
 ```
 
@@ -405,11 +426,20 @@ POST /api/v1/auth/register
 4. Verification email sent with link: `${app.url}/api/auth/verify?token=<token>`
 
 **Error Response**:
-- `409 Conflict`: Email already exists
+- `409 Conflict`: Email already exists (Unverified)
 ```json
 {
   "error": true,
-  "message": "Email already exists"
+  "message": "Email already registered but not verified. Please check your email or use the resend verification endpoint.",
+  "resendVerificationAvailable": true,
+  "resendEndpoint": "/api/v1/auth/resend-verification"
+}
+```
+- `409 Conflict`: Email already exists (Verified)
+```json
+{
+  "error": true,
+  "message": "Email already exists and is verified. Please login instead."
 }
 ```
 
@@ -445,7 +475,61 @@ GET /api/v1/auth/verify?token=<verification_token>
 
 ---
 
-#### 5. **Request Password Reset**
+#### 5. **Resend Verification Email**
+```
+POST /api/v1/auth/resend-verification
+```
+**Description**: Resends verification email to unverified user with a new token (no authentication required)
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Verification email has been resent. Please check your email.",
+  "email": "user@example.com"
+}
+```
+
+**Error Responses**:
+- `404 Not Found`: User not found
+```json
+{
+  "error": true,
+  "message": "User not found with this email"
+}
+```
+- `400 Bad Request`: Account already verified
+```json
+{
+  "error": true,
+  "message": "Account is already verified. Please login instead."
+}
+```
+
+**Use Cases**:
+- User didn't receive original verification email
+- Verification token expired (24 hours)
+- User tries to signup again with existing unverified email
+
+**What happens**:
+1. New verification token (UUID) generated
+2. Old token is replaced in database
+3. Token logged to console: `log.info("Resend verification token for {}: {}", email, token)`
+4. New verification email sent with link: `${app.url}/api/auth/verify?token=<new-token>`
+5. Token expires in 24 hours
+
+**Note**: Check application logs for the new verification token.
+
+---
+
+#### 6. **Request Password Reset**
 ```
 POST /api/v1/auth/request-password-reset
 ```
@@ -483,7 +567,7 @@ POST /api/v1/auth/request-password-reset
 
 ---
 
-#### 6. **Reset Password**
+#### 7. **Reset Password**
 ```
 POST /api/v1/auth/reset-password
 ```
@@ -647,8 +731,9 @@ Allows requests from different origins:
 - Increase data quality and prevent bot registrations
 - Enable account recovery via email
 - **Token-based verification** - More secure and user-friendly than OTP
+- **Resend capability** - Users can request new tokens if needed
 
-### Flow (Token-Based)
+### Flow (Token-Based with Resend Option)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -712,6 +797,47 @@ Allows requests from different origins:
 │    { "success": true,                                  │
 │      "message": "Email verified successfully" }         │
 │    User can now login                                  │
+└─────────────────────────────────────────────────────────┘
+
+Alternative Flow: Resend Verification Email
+┌─────────────────────────────────────────────────────────┐
+│ 1. User didn't receive email or token expired           │
+│    POST /api/v1/auth/resend-verification                │
+│    { "email": "user@example.com" }                      │
+└────────────────┬────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────┐
+│ 2. Validate user exists and is unverified               │
+│    ✓ User found in database                            │
+│    ✓ isAccountVerified = false                         │
+└────────────────┬────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────┐
+│ 3. Generate NEW verification token (UUID)               │
+│    Old token is replaced                                │
+│    New expiry: now + 24 hours                          │
+└────────────────┬────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────┐
+│ 4. Token logged to console                              │
+│    log.info("Resend verification token for {}: {}",    │
+│             email, token)                               │
+└────────────────┬────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────┐
+│ 5. New verification email sent                          │
+│    EmailService.sendVerificationLinkEmail()            │
+└────────────────┬────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────┐
+│ 6. User receives new email and clicks link             │
+│    GET /api/v1/auth/verify?token=<new-token>           │
+│    Account verified ✅                                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -991,7 +1117,25 @@ GET http://localhost:8080/api/v1/auth/verify?token=<verification-token-from-emai
 - Email link (click the verification link in email)
 - Console logs: `log.info("Token for {}: {}", email, token)`
 
-#### 6. **Test Password Reset Request**
+#### 6. **Test Resend Verification Email**
+
+```
+POST http://localhost:8080/api/v1/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com"
+}
+```
+
+**Response**: New verification email sent. Check console logs for new verification token.
+
+**Note**: This is useful when:
+- User didn't receive the original email
+- Verification token expired (24 hours)
+- User tries to signup again with existing unverified email
+
+#### 7. **Test Password Reset Request**
 
 ```
 POST http://localhost:8080/api/v1/auth/request-password-reset
@@ -1174,25 +1318,7 @@ curl -X GET http://localhost:8080/api/v1/profile \
 
 ---
 
-## Database Schema
 
-### UserEntity Table
-
-```sql
-CREATE TABLE user_entity (
-  user_id VARCHAR(36) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  is_account_verified BOOLEAN DEFAULT FALSE,
-  verify_otp VARCHAR(10),
-  verify_otp_expire_at BIGINT DEFAULT 0,
-  reset_otp VARCHAR(10),
-  reset_otp_expire_at BIGINT DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-```
 
 ### Column Descriptions
 
@@ -1265,8 +1391,8 @@ CREATE TABLE user_entity (
 
 ## License & Contact
 
-**Project**: FullStackAuth  
-**Created By**: Arpon007  
+**Project**: FullStackAuth WITH SPRING BOOT  
+**Created By**: MD SHAZAN MAHMUD ARPON  
 **Purpose**: Educational - Full Stack Authentication System
 
 ---
