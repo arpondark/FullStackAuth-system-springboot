@@ -162,6 +162,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             "/auth/logout",
             "/auth/isAuthenticated",
             "/auth/request-password-reset",
+            "/auth/resend-verification",
             "/test"
     );
 

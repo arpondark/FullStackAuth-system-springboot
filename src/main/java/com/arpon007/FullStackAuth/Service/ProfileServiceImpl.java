@@ -68,26 +68,40 @@ public class ProfileServiceImpl implements ProfileService {
 
     @Override
     public ProfileResponse createProfile(ProfileRequest request) {
-        UserEntity newProfile = convertToUserEntity(request);
-        if (!userRepository.existsByEmail(request.getEmail())) {
-            // Generate verification token
-            String verificationToken = UUID.randomUUID().toString();
-            long expiryTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000); // 24 hours
-            
-            newProfile.setVerifyOtp(verificationToken);
-            newProfile.setVerifyOtpExpireAt(expiryTime);
-            
-            newProfile = userRepository.save(newProfile);
-            
-            // Log the token
-            log.info("Token for {}: {}", request.getEmail(), verificationToken);
-            
-            // Send verification link email
-            emailService.sendVerificationLinkEmail(request.getEmail(), verificationToken);
-            
-            return convertToUserResponse(newProfile);
+        // Check if user already exists
+        if (userRepository.existsByEmail(request.getEmail())) {
+            UserEntity existingUser = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+            // If user exists but not verified, provide helpful message
+            if (existingUser.getIsAccountVerified() == null || !existingUser.getIsAccountVerified()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Email already registered but not verified. Please check your email or use the resend verification endpoint.");
+            }
+
+            // If user exists and is verified
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists and is verified. Please login instead.");
         }
-        throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+
+        // Create new user
+        UserEntity newProfile = convertToUserEntity(request);
+
+        // Generate verification token
+        String verificationToken = UUID.randomUUID().toString();
+        long expiryTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000); // 24 hours
+
+        newProfile.setVerifyOtp(verificationToken);
+        newProfile.setVerifyOtpExpireAt(expiryTime);
+
+        newProfile = userRepository.save(newProfile);
+
+        // Log the token
+        log.info("Token for {}: {}", request.getEmail(), verificationToken);
+
+        // Send verification link email
+        emailService.sendVerificationLinkEmail(request.getEmail(), verificationToken);
+
+        return convertToUserResponse(newProfile);
     }
 
     @Override
@@ -278,5 +292,30 @@ public class ProfileServiceImpl implements ProfileService {
         UserEntity existingUser = userRepository.findByResetOtp(resetToken)
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid or expired token"));
         return existingUser.getEmail();
+    }
+
+    @Override
+    public void resendVerificationEmail(String email) {
+        UserEntity existingUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+
+        // Check if account is already verified
+        if (existingUser.getIsAccountVerified() != null && existingUser.getIsAccountVerified()) {
+            throw new IllegalStateException("Account is already verified. Please login instead.");
+        }
+
+        // Generate new verification token
+        String verificationToken = UUID.randomUUID().toString();
+        long expiryTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000); // 24 hours
+
+        existingUser.setVerifyOtp(verificationToken);
+        existingUser.setVerifyOtpExpireAt(expiryTime);
+        userRepository.save(existingUser);
+
+        // Log the token
+        log.info("Resend verification token for {}: {}", email, verificationToken);
+
+        // Send verification link email
+        emailService.sendVerificationLinkEmail(email, verificationToken);
     }
 }

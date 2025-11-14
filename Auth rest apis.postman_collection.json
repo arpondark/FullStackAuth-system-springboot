@@ -117,6 +117,62 @@
 					"response": []
 				},
 				{
+					"name": "Resend Verification Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.test(\"Verification email resent successfully\", function () {",
+									"        pm.expect(jsonData.success).to.be.true;",
+									"        pm.expect(jsonData).to.have.property('email');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john.doe@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/resend-verification",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"resend-verification"
+							]
+						},
+						"description": "Resend verification email to unverified user. Generates a new verification token.\n\n**Request Body:**\n- `email` (string, required): User's email address\n\n**Response:**\n- Status: 200 OK on success\n- Status: 404 Not Found if user doesn't exist\n- Status: 400 Bad Request if account is already verified\n\n**Example Success Response:**\n```json\n{\n    \"success\": true,\n    \"message\": \"Verification email has been resent. Please check your email.\",\n    \"email\": \"john.doe@example.com\"\n}\n```\n\n**Example Error Response (Already Verified):**\n```json\n{\n    \"error\": true,\n    \"message\": \"Account is already verified. Please login instead.\"\n}\n```\n\n**Example Error Response (User Not Found):**\n```json\n{\n    \"error\": true,\n    \"message\": \"User not found with this email\"\n}\n```\n\n**Use Cases:**\n- User didn't receive original verification email\n- Verification token expired (24 hours)\n- User tries to signup again with existing unverified email\n\n**Note:** Check application logs for the new verification token."
+					},
+					"response": []
+				},
+				{
 					"name": "Login",
 					"event": [
 						{

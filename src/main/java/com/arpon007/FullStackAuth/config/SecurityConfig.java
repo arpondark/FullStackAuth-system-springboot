@@ -69,7 +69,7 @@ public class SecurityConfig {
         http.cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/register", "/auth/signup", "/auth/send-reset-otp", "/auth/reset-password", "/auth/verify", "/auth/request-password-reset", "/auth/logout", "/auth/isAuthenticated").permitAll()
+                        .requestMatchers("/auth/login", "/auth/register", "/auth/signup", "/auth/send-reset-otp", "/auth/reset-password", "/auth/verify", "/auth/request-password-reset", "/auth/resend-verification", "/auth/logout", "/auth/isAuthenticated").permitAll()
                         .requestMatchers("/test").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

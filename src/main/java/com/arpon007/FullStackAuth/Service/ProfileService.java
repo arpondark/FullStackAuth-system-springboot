@@ -41,4 +41,14 @@ public interface ProfileService {
      * @return the user's email address
      */
     String getEmailByResetToken(String resetToken);
+
+    /**
+     * Resends the verification email to an unverified user.
+     * Generates a new verification token and sends a new email.
+     *
+     * @param email the user's email address
+     * @throws UsernameNotFoundException if user not found
+     * @throws IllegalStateException if account is already verified
+     */
+    void resendVerificationEmail(String email);
 }

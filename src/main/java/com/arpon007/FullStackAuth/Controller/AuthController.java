@@ -264,6 +264,19 @@ public class AuthController {
                     .header("Set-Cookie", cookie.toString())
                     .body(response);
 
+        } catch (ResponseStatusException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", true);
+            error.put("message", e.getReason());
+
+            // If user exists but not verified, suggest resending verification
+            if (e.getStatusCode().value() == 409 && e.getReason().contains("not verified")) {
+                error.put("resendVerificationAvailable", true);
+                error.put("resendEndpoint", "/api/v1/auth/resend-verification");
+            }
+
+            return ResponseEntity.status(e.getStatusCode()).body(error);
+
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("error", true);
@@ -452,6 +465,59 @@ public class AuthController {
             error.put("error", true);
             error.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
+    /**
+     * Resend verification email to unverified user.
+     * This endpoint generates a new verification token and sends a new email.
+     *
+     * <p><b>Use Case:</b></p>
+     * <ul>
+     *   <li>User didn't receive the original verification email</li>
+     *   <li>Verification token expired (24 hours)</li>
+     *   <li>User tries to signup again with existing unverified email</li>
+     * </ul>
+     *
+     * @param request body containing email
+     * @return success message or error
+     */
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, Object>> resendVerificationEmail(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            if (email == null || email.isEmpty()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", true);
+                error.put("message", "Email is required");
+                return ResponseEntity.badRequest().body(error);
+            }
+
+            profileService.resendVerificationEmail(email);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Verification email has been resent. Please check your email.");
+            response.put("email", email);
+            return ResponseEntity.ok(response);
+
+        } catch (UsernameNotFoundException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", true);
+            error.put("message", "User not found with this email");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+
+        } catch (IllegalStateException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", true);
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", true);
+            error.put("message", "Failed to resend verification email: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
