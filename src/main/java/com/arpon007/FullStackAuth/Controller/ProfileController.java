@@ -76,9 +76,8 @@ public class ProfileController {
     @PostMapping("/auth/register")
     @ResponseStatus(code = CREATED)
     public ProfileResponse createProfile(@Valid @RequestBody ProfileRequest request) {
-        ProfileResponse response= profileService.createProfile(request);
-        emailService.sendWelcomeEmail(response.getEmail(),response.getName());
-        return response;
+        // Verification email is automatically sent in ProfileServiceImpl.createProfile()
+        return profileService.createProfile(request);
     }
 
 

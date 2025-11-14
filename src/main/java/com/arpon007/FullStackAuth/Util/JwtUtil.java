@@ -138,6 +138,30 @@ public class JwtUtil {
     }
 
     /**
+     * Creates a temporary signup token for unverified users.
+     * This token is used during email verification and has a longer expiration.
+     *
+     * Claims included:
+     * - subject: the user email
+     * - iat (issued at): current time
+     * - exp (expiration): 24 hours from now (matches verification link expiration)
+     *
+     * @param email the user's email address
+     * @return a compact JWT string for signup verification
+     */
+    public String generateSignupToken(String email) {
+        Map<String, Object> claims = new HashMap<>();
+        SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(email)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // 24 hours
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
      * Internal helper to build and sign a JWT with the provided claims and subject (email).
      * Uses HS256 algorithm with the configured secret key.
      *

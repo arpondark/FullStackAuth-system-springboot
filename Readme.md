@@ -27,13 +27,16 @@
 
 ### Key Features
 ✅ User registration and login with JWT authentication  
-✅ Email-based OTP verification for account activation  
-✅ Password reset with OTP validation  
+✅ **Token-based email verification** - Automatic verification links sent on signup  
+✅ **Token-based password reset** - Secure reset links via email  
+✅ Token logging to console for debugging  
 ✅ HTTP-only secure cookies for token storage  
 ✅ JWT token validation via filter  
 ✅ CORS-enabled for frontend integration  
 ✅ Comprehensive error handling  
 ✅ Role-based access control ready (Spring Security)  
+
+> **Note:** The system now uses **token-based verification** instead of OTP. Tokens are UUIDs sent via email links. Old OTP-based methods are deprecated and commented out in the codebase.  
 
 ---
 
@@ -52,12 +55,12 @@
 │                   │                                              │
 │  ┌────────────────▼────────────┐     ┌──────────────────────┐   │
 │  │   AuthController            │     │  ProfileController   │   │
-│  │  ├─ POST /auth/login        │     │  ├─ GET /profile    │   │
-│  │  ├─ GET /auth/isAuthenticated     │  └─ PUT /profile    │   │
-│  │  ├─ POST /auth/send-otp          │                      │   │
-│  │  ├─ POST /auth/verify-otp        └──────────────────────┘   │
-│  │  ├─ POST /auth/send-reset-otp         │                     │
-│  │  └─ POST /auth/reset-password         │                     │
+│  │  ├─ POST /auth/login        │     │  ├─ POST /auth/register│ │
+│  │  ├─ GET /auth/isAuthenticated│     │  ├─ GET /profile    │   │
+│  │  ├─ GET /auth/verify        │     │  └─ PUT /profile    │   │
+│  │  ├─ POST /auth/request-      │     │                      │   │
+│  │  │      password-reset       │     └──────────────────────┘   │
+│  │  └─ POST /auth/reset-password│                                 │
 │  └────────────────┬────────────────────────┘                    │
 │                   │                                              │
 │  ┌────────────────▼─────────────────────────────────────────┐   │
@@ -93,13 +96,14 @@
 
 | Component | Purpose |
 |-----------|---------|
-| **AuthController** | Handles login, OTP verification, password reset endpoints |
-| **ProfileController** | Manages user profile operations |
+| **AuthController** | Handles login, token-based verification, password reset endpoints |
+| **ProfileController** | Manages user registration and profile operations |
 | **JwtRequestFilter** | Intercepts requests and validates JWT tokens |
 | **JwtUtil** | Creates and validates JWT tokens |
 | **SecurityConfig** | Configures Spring Security (CORS, authentication, authorization) |
 | **AppUserDetailsService** | Loads user details from database for authentication |
-| **EmailService** | Sends verification and password reset emails |
+| **EmailService** | Sends token-based verification and password reset link emails |
+| **ProfileServiceImpl** | Business logic for registration, verification, and password reset |
 | **UserEntity** | Database model for user data |
 | **UserRepository** | JPA repository for database operations |
 
@@ -369,79 +373,112 @@ OR Cookie: `jwt=<jwt_token>` (automatic)
 
 ---
 
-#### 3. **Send Verification OTP**
+#### 3. **Register User (Signup)**
 ```
-POST /api/v1/auth/send-otp
+POST /api/v1/auth/register
 ```
-**Description**: Sends an OTP to the logged-in user's email for account verification
-
-**Headers**:
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Success Response (200 OK)**:
-```
-Email sent with OTP
-```
-
----
-
-#### 4. **Verify OTP**
-```
-POST /api/v1/auth/verify-otp
-```
-**Description**: Verifies the OTP sent to the user's email
-
-**Headers**:
-```
-Authorization: Bearer <jwt_token>
-```
+**Description**: Registers a new user and automatically sends verification email with token link
 
 **Request Body**:
 ```json
 {
-  "otp": "123456"
+  "name": "John Doe",
+  "email": "user@example.com",
+  "password": "secret123"
 }
 ```
 
-**Success Response (200 OK)**:
+**Success Response (201 Created)**:
+```json
+{
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "John Doe",
+  "email": "user@example.com",
+  "isAccountVerified": false
+}
 ```
-Account verified successfully
-```
+
+**What happens**:
+1. User account created with `isAccountVerified = false`
+2. Verification token (UUID) generated automatically
+3. Token logged to console: `log.info("Token for {}: {}", email, token)`
+4. Verification email sent with link: `${app.url}/api/auth/verify?token=<token>`
 
 **Error Response**:
-- `400 Bad Request`: OTP is required
+- `409 Conflict`: Email already exists
 ```json
 {
   "error": true,
-  "message": "OTP is required/Invalid"
-}
-```
-- `500 Internal Server Error`: Invalid or expired OTP
-```json
-{
-  "error": true,
-  "message": "Invalid OTP or OTP has expired"
+  "message": "Email already exists"
 }
 ```
 
 ---
 
-#### 5. **Send Password Reset OTP**
+#### 4. **Verify Email**
 ```
-POST /api/v1/auth/send-reset-otp
+GET /api/v1/auth/verify?token=<verification_token>
 ```
-**Description**: Sends an OTP for password reset (no authentication required)
+**Description**: Verifies user email using token from verification link (no authentication required)
 
 **Query Parameters**:
+- `token` (string, required): Verification token from email link
+
+**Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Email verified successfully"
+}
 ```
-email=user@example.com
+
+**Error Response**:
+- `400 Bad Request`: Invalid or expired token
+```json
+{
+  "error": true,
+  "message": "Invalid or expired token"
+}
+```
+
+**Note**: After verification, `isAccountVerified` is set to `true` and user can login.
+
+---
+
+#### 5. **Request Password Reset**
+```
+POST /api/v1/auth/request-password-reset
+```
+**Description**: Requests password reset and sends reset link email with token (no authentication required)
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com"
+}
 ```
 
 **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Password reset link has been sent to your email"
+}
 ```
-Email sent with reset OTP
+
+**What happens**:
+1. Reset token (UUID) generated
+2. Token logged to console: `log.info("Token for {}: {}", email, token)`
+3. Reset email sent with link: `${app.url}/api/auth/reset-password?token=<token>`
+4. Token expires in 15 minutes
+
+**Error Response**:
+- `400 Bad Request`: Email not found or invalid
+```json
+{
+  "error": true,
+  "message": "User not found: user@example.com"
+}
 ```
 
 ---
@@ -450,21 +487,45 @@ Email sent with reset OTP
 ```
 POST /api/v1/auth/reset-password
 ```
-**Description**: Resets password using OTP (no authentication required)
+**Description**: Resets password using token from reset link (no authentication required)
 
+**Request Body** (Token in body):
+```json
+{
+  "token": "reset-token-from-email",
+  "newPassword": "newSecret123"
+}
+```
+
+**OR** Token as query parameter:
+```
+POST /api/v1/auth/reset-password?token=reset-token-from-email
+```
 **Request Body**:
 ```json
 {
-  "email": "user@example.com",
-  "otp": "123456",
   "newPassword": "newSecret123"
 }
 ```
 
 **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Password reset successfully"
+}
 ```
-Password reset successfully
+
+**Error Response**:
+- `400 Bad Request`: Invalid or expired token
+```json
+{
+  "error": true,
+  "message": "Token has expired"
+}
 ```
+
+**Note**: Token expires in 15 minutes. After reset, user can login with new password.
 
 ---
 
@@ -585,95 +646,103 @@ Allows requests from different origins:
 - Verify users' email addresses before account activation
 - Increase data quality and prevent bot registrations
 - Enable account recovery via email
+- **Token-based verification** - More secure and user-friendly than OTP
 
-### Flow
+### Flow (Token-Based)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ 1. User registers (POST /api/v1/auth/register)          │
+│    { name, email, password }                            │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
 │ 2. User account created                                  │
 │    isAccountVerified = false                            │
+│    Verification token (UUID) generated automatically   │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 3. User logs in with JWT token                          │
+│ 3. Token logged to console                              │
+│    log.info("Token for {}: {}", email, token)          │
+│    Example: Token for user@example.com: abc-123-def... │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 4. User requests verification OTP                       │
-│    POST /api/v1/auth/send-otp                          │
-└────────────────┬────────────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────────────┐
-│ 5. Generate 6-digit OTP                                 │
-│    verifyOtp = "123456"                                │
-│    verifyOtpExpireAt = now + 15 minutes                │
-└────────────────┬────────────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────────────┐
-│ 6. Send OTP via email (EmailService)                   │
-│    emailService.sendVerificationOtpEmail()             │
+│ 4. Verification email sent automatically                │
+│    EmailService.sendVerificationLinkEmail()            │
 │                                                         │
 │    ┌─────────────────────────────────────┐            │
 │    │ Email Template:                      │            │
-│    │ Subject: Verification OTP            │            │
-│    │ Body: Your OTP: 123456              │            │
-│    │       Valid for 15 minutes           │            │
+│    │ Subject: Verify Your Email          │            │
+│    │ Body: Click to verify:              │            │
+│    │       http://localhost:8080/api/     │            │
+│    │       auth/verify?token=abc-123...   │            │
+│    │       Valid for 24 hours             │            │
 │    └─────────────────────────────────────┘            │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 7. User enters OTP                                      │
-│    POST /api/v1/auth/verify-otp                        │
-│    { "otp": "123456" }                                 │
+│ 5. User clicks verification link                        │
+│    GET /api/v1/auth/verify?token=abc-123-def...        │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 8. Verify OTP                                           │
-│    ✓ OTP matches                                        │
-│    ✓ OTP not expired                                    │
+│ 6. Validate token                                       │
+│    ✓ Token exists in database                          │
+│    ✓ Token not expired (24 hours)                     │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 9. Mark account as verified                            │
+│ 7. Mark account as verified                            │
 │    isAccountVerified = true                            │
-│    verifyOtp = null                                    │
+│    verifyOtp = null (token cleared)                    │
 │    verifyOtpExpireAt = 0                              │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 10. Success response                                    │
-│     Account verified successfully                       │
+│ 8. Success response                                     │
+│    { "success": true,                                  │
+│      "message": "Email verified successfully" }         │
+│    User can now login                                  │
 └─────────────────────────────────────────────────────────┘
 ```
+
+### Key Features
+
+- **Automatic on Signup**: Verification token generated and email sent automatically
+- **Token Logging**: All tokens logged to console for debugging: `log.info("Token for {}: {}", email, token)`
+- **Secure Tokens**: Uses UUID (Universally Unique Identifier) instead of predictable OTPs
+- **Email Links**: User-friendly clickable links instead of manual OTP entry
+- **24-Hour Expiry**: Tokens expire after 24 hours for security
 
 ### Email Service Implementation
 
 **Class**: `EmailService.java`
 
 **Methods**:
-- `sendVerificationOtpEmail(String email, String otp)`: Sends verification OTP
-- `sendResetOtpEmail(String email, String otp)`: Sends password reset OTP
-- `sendWelcomeEmail(String email, String name)`: Sends welcome email
+- `sendVerificationLinkEmail(String email, String token)`: **Current** - Sends verification link email
+- `sendPasswordResetLinkEmail(String email, String token)`: **Current** - Sends password reset link email
+- `sendVerificationOtpEmail(String email, String otp)`: **Deprecated** - Old OTP method (kept for backward compatibility)
+- `sendResetOtpEmail(String email, String otp)`: **Deprecated** - Old OTP method (kept for backward compatibility)
 
 **Email Configuration** (`application.properties`):
 ```properties
+# Application base URL for email links
+app.url=http://localhost:8080
+
+# Email configuration
 spring.mail.host=smtp.gmail.com
 spring.mail.port=587
-spring.mail.username=${EMAIL_USER}          # From environment variable
-spring.mail.password=${EMAIL_PASS}          # From environment variable
+spring.mail.username=YOUR_EMAIL
+spring.mail.password=YOUR_APP_PASSWORD
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 ```
@@ -682,11 +751,15 @@ spring.mail.properties.mail.smtp.starttls.enable=true
 1. Create a Gmail account (or use existing)
 2. Enable 2-Factor Authentication
 3. Generate App Password: https://myaccount.google.com/apppasswords
-4. Set environment variables:
-   ```
-   EMAIL_USER=your-email@gmail.com
-   EMAIL_PASS=your-app-password
-   ```
+4. Update `application.properties`:
+   - Set `app.url` to your application base URL
+   - Set `spring.mail.username` to your Gmail address
+   - Set `spring.mail.password` to your Gmail App Password
+
+### Token Expiry Times
+
+- **Verification Token**: 24 hours
+- **Reset Token**: 15 minutes
 
 ---
 
@@ -694,14 +767,16 @@ spring.mail.properties.mail.smtp.starttls.enable=true
 
 ### Purpose
 - Allow users to reset forgotten passwords
-- Use OTP for verification without security questions
+- **Token-based reset** - Secure reset links via email
+- No authentication required for reset request
 
-### Flow
+### Flow (Token-Based)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ 1. User requests password reset                         │
-│    POST /api/v1/auth/send-reset-otp?email=user@ex.com  │
+│    POST /api/v1/auth/request-password-reset             │
+│    { "email": "user@example.com" }                      │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
@@ -712,62 +787,68 @@ spring.mail.properties.mail.smtp.starttls.enable=true
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 3. Generate OTP and expiry                              │
-│    resetOtp = "654321"                                 │
-│    resetOtpExpireAt = now + 24 hours                  │
+│ 3. Generate reset token (UUID) and expiry               │
+│    resetOtp = "xyz-789-abc-def..." (UUID)              │
+│    resetOtpExpireAt = now + 15 minutes                 │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 4. Send reset OTP via email                            │
-│    emailService.sendResetOtpEmail()                    │
+│ 4. Token logged to console                              │
+│    log.info("Token for {}: {}", email, token)            │
+└────────────────┬────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────┐
+│ 5. Send reset link via email                            │
+│    EmailService.sendPasswordResetLinkEmail()          │
 │                                                         │
 │    ┌─────────────────────────────────────┐            │
 │    │ Email Template:                      │            │
-│    │ Subject: Password Reset OTP          │            │
-│    │ Body: Your reset OTP: 654321        │            │
-│    │       Valid for 24 hours             │            │
+│    │ Subject: Password Reset Request      │            │
+│    │ Body: Click to reset:                │            │
+│    │       http://localhost:8080/api/     │            │
+│    │       auth/reset-password?token=xyz...│            │
+│    │       Valid for 15 minutes            │            │
 │    └─────────────────────────────────────┘            │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 5. User submits reset request with OTP & new password  │
-│    POST /api/v1/auth/reset-password                    │
-│    {                                                    │
-│      "email": "user@example.com",                      │
-│      "otp": "654321",                                 │
-│      "newPassword": "newSecret123"                    │
-│    }                                                    │
+│ 6. User clicks reset link and submits new password      │
+│    POST /api/v1/auth/reset-password                     │
+│    ?token=xyz-789-abc-def...                           │
+│    { "newPassword": "newSecret123" }                   │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 6. Validate OTP                                         │
-│    ✓ OTP matches stored OTP                            │
-│    ✓ OTP not expired                                   │
+│ 7. Validate token                                       │
+│    ✓ Token exists in database                          │
+│    ✓ Token not expired (15 minutes)                    │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 7. Update password                                      │
+│ 8. Update password                                      │
 │    newPasswordHash = bcrypt(newPassword)               │
 │    password = newPasswordHash                          │
-│    resetOtp = null                                     │
+│    resetOtp = null (token cleared)                     │
 │    resetOtpExpireAt = 0                               │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 8. Success response                                     │
-│    Password reset successfully                         │
+│ 9. Success response                                     │
+│    { "success": true,                                   │
+│      "message": "Password reset successfully" }         │
 │    User can now login with new password                │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### OTP Expiry Times
-- **Verification OTP**: 15 minutes
-- **Reset OTP**: 24 hours
+### Token Expiry Times
+- **Verification Token**: 24 hours
+- **Reset Token**: 15 minutes
 
 ---
 
@@ -885,42 +966,69 @@ GET http://localhost:8080/api/v1/auth/isAuthenticated
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-#### 4. **Test Send OTP**
+#### 4. **Test Signup (Automatic Verification Email)**
 
 ```
-POST http://localhost:8080/api/v1/auth/send-otp
-Authorization: Bearer <your-jwt-token>
-```
-
-#### 5. **Test Verify OTP**
-
-```
-POST http://localhost:8080/api/v1/auth/verify-otp
-Authorization: Bearer <your-jwt-token>
+POST http://localhost:8080/api/v1/auth/register
 Content-Type: application/json
 
 {
-  "otp": "123456"
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "password": "SecurePassword123"
 }
 ```
 
-#### 6. **Test Password Reset**
+**Response**: User created, verification email sent automatically. Check console logs for verification token.
+
+#### 5. **Test Email Verification**
 
 ```
-POST http://localhost:8080/api/v1/auth/send-reset-otp?email=user@example.com
+GET http://localhost:8080/api/v1/auth/verify?token=<verification-token-from-email-or-console>
 ```
 
-Then:
+**Note**: Get token from:
+- Email link (click the verification link in email)
+- Console logs: `log.info("Token for {}: {}", email, token)`
+
+#### 6. **Test Password Reset Request**
+
+```
+POST http://localhost:8080/api/v1/auth/request-password-reset
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Response**: Reset link email sent. Check console logs for reset token.
+
+#### 7. **Test Password Reset**
+
+```
+POST http://localhost:8080/api/v1/auth/reset-password?token=<reset-token-from-email-or-console>
+Content-Type: application/json
+
+{
+  "newPassword": "newSecret123"
+}
+```
+
+**OR** with token in body:
 ```
 POST http://localhost:8080/api/v1/auth/reset-password
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
-  "otp": "654321",
+  "token": "<reset-token-from-email-or-console>",
   "newPassword": "newSecret123"
 }
 ```
+
+**Note**: Get token from:
+- Email link (extract token from reset link)
+- Console logs: `log.info("Token for {}: {}", email, token)`
 
 ### Using cURL
 
