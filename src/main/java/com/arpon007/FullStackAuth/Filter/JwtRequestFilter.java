@@ -155,10 +155,14 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private static final List<String> PUBLIC_URLS = List.of(
             "/auth/login",
             "/auth/register",
+            "/auth/signup",
+            "/auth/verify",
             "/auth/send-reset-otp",
             "/auth/reset-password",
             "/auth/logout",
             "/auth/isAuthenticated",
+            "/auth/request-password-reset",
+            "/auth/resend-verification",
             "/test"
     );
 

@@ -20,6 +20,9 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Value("${app.url}")
+    private String appUrl;
+
     private MimeMessageHelper createMessage(String toEmail, String subject) throws MessagingException {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "utf-8");
@@ -62,6 +65,32 @@ public class EmailService {
             log.info("Verification OTP email sent to {}", toEmail);
         } catch (MessagingException e) {
             log.error("Error sending verification OTP email: {}", e.getMessage());
+        }
+    }
+
+    public void sendVerificationLinkEmail(String toEmail, String token) {
+        try {
+            String verificationLink = appUrl + "/api/auth/verify?token=" + token;
+            MimeMessageHelper helper = createMessage(toEmail, "Verify Your Email");
+            String html = EmailTemplates.verificationLinkTemplate(verificationLink);
+            helper.setText(html, true);
+            mailSender.send(helper.getMimeMessage());
+            log.info("Verification link email sent to {}", toEmail);
+        } catch (MessagingException e) {
+            log.error("Error sending verification link email: {}", e.getMessage());
+        }
+    }
+
+    public void sendPasswordResetLinkEmail(String toEmail, String token) {
+        try {
+            String resetLink = appUrl + "/api/auth/reset-password?token=" + token;
+            MimeMessageHelper helper = createMessage(toEmail, "Password Reset Request");
+            String html = EmailTemplates.resetPasswordLinkTemplate(resetLink);
+            helper.setText(html, true);
+            mailSender.send(helper.getMimeMessage());
+            log.info("Password reset link email sent to {}", toEmail);
+        } catch (MessagingException e) {
+            log.error("Error sending password reset link email: {}", e.getMessage());
         }
     }
 }
