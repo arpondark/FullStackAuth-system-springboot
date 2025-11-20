@@ -23,6 +23,15 @@ public class EmailService {
     @Value("${app.url}")
     private String appUrl;
 
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    private String baseUrl() {
+        String cp = contextPath == null ? "" : contextPath.trim();
+        if (cp.endsWith("/")) cp = cp.substring(0, cp.length() - 1);
+        return (appUrl.endsWith("/") ? appUrl.substring(0, appUrl.length() - 1) : appUrl) + cp;
+    }
+
     private MimeMessageHelper createMessage(String toEmail, String subject) throws MessagingException {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "utf-8");
@@ -70,7 +79,7 @@ public class EmailService {
 
     public void sendVerificationLinkEmail(String toEmail, String token) {
         try {
-            String verificationLink = appUrl + "/api/auth/verify?token=" + token;
+            String verificationLink = appUrl + "/verify?token=" + token;
             MimeMessageHelper helper = createMessage(toEmail, "Verify Your Email");
             String html = EmailTemplates.verificationLinkTemplate(verificationLink);
             helper.setText(html, true);
@@ -83,7 +92,7 @@ public class EmailService {
 
     public void sendPasswordResetLinkEmail(String toEmail, String token) {
         try {
-            String resetLink = appUrl + "/api/auth/reset-password?token=" + token;
+            String resetLink = appUrl + "/reset-password?token=" + token;
             MimeMessageHelper helper = createMessage(toEmail, "Password Reset Request");
             String html = EmailTemplates.resetPasswordLinkTemplate(resetLink);
             helper.setText(html, true);
