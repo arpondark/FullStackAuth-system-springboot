@@ -1,4 +1,4 @@
-package com.arpon007.FullStackAuth.Service;
+package com.arpon007.FullStackAuth.Service.Email;
 
 public class EmailTemplates {
 

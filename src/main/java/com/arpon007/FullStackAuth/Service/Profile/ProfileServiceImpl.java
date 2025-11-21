@@ -1,10 +1,15 @@
-package com.arpon007.FullStackAuth.Service;
+package com.arpon007.FullStackAuth.Service.Profile;
 
+import com.arpon007.FullStackAuth.Entity.Role.RoleEntity;
 import com.arpon007.FullStackAuth.Entity.UserEntity;
-import com.arpon007.FullStackAuth.Io.ProfileRequest;
-import com.arpon007.FullStackAuth.Io.ProfileResponse;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileUpdateRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileResponse;
+import com.arpon007.FullStackAuth.Service.Email.EmailService;
 import com.arpon007.FullStackAuth.Util.JwtUtil;
 import com.arpon007.FullStackAuth.repository.UserRepository;
+import com.arpon007.FullStackAuth.repository.RoleRepository;
+import com.arpon007.FullStackAuth.Entity.Role.RoleName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * ProfileServiceImpl handles user profile operations including registration,
@@ -65,6 +69,7 @@ public class ProfileServiceImpl implements ProfileService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final RoleRepository roleRepository;
 
     @Override
     public ProfileResponse createProfile(ProfileRequest request) {
@@ -109,6 +114,17 @@ public class ProfileServiceImpl implements ProfileService {
         UserEntity existUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
         return convertToUserResponse(existUser);
+    }
+
+    @Override
+    public ProfileResponse updateProfile(String email, ProfileUpdateRequest request) {
+        UserEntity existingUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+        if (request.getName() != null && !request.getName().isBlank()) {
+            existingUser.setName(request.getName());
+        }
+        existingUser = userRepository.save(existingUser);
+        return convertToUserResponse(existingUser);
     }
 
     @Override
@@ -261,6 +277,9 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     private UserEntity convertToUserEntity(ProfileRequest request) {
+        var userRole = roleRepository.findByName(RoleName.USER)
+                .orElseGet(() -> roleRepository.save(RoleEntity.builder().name(RoleName.USER).build()));
+
         return UserEntity.builder()
                 .email(request.getEmail())
                 .userId(UUID.randomUUID().toString())
@@ -271,6 +290,7 @@ public class ProfileServiceImpl implements ProfileService {
                 .verifyOtp(null)
                 .verifyOtpExpireAt(0L)
                 .resetOtp(null)
+                .roles(new java.util.HashSet<>(java.util.List.of(userRole)))
                 .build();
 
     }

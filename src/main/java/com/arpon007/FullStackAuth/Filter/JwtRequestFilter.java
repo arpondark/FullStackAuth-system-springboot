@@ -1,6 +1,6 @@
 package com.arpon007.FullStackAuth.Filter;
 
-import com.arpon007.FullStackAuth.Service.AppUserDetaisService;
+import com.arpon007.FullStackAuth.Service.User.AppUserDetaisService;
 import com.arpon007.FullStackAuth.Util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

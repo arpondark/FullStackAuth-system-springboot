@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "6c3a5b41-c566-43b5-8acd-977801bdf6c3",
 		"name": "Auth rest apis",
-		"description": "# 🚀 Full Stack Auth API Collection\n\nThis collection contains all authentication endpoints including email verification and password reset flows.\n\n## 📋 Endpoints\n\n### Authentication\n- **POST /api/auth/signup** - Register a new user (sends verification email)\n- **GET /api/auth/verify** - Verify email using token from email link\n- **POST /api/auth/login** - Login with email and password\n- **GET /api/auth/isAuthenticated** - Check if user is authenticated\n\n### Password Reset\n- **POST /api/auth/request-password-reset** - Request password reset (sends reset link email)\n- **POST /api/auth/reset-password** - Reset password using token\n\n## 🔧 Environment Variables\n\nSet these variables in your Postman environment:\n- `base_url` - Base URL of your API (e.g., http://localhost:8080)\n- `token_verification` - Verification token from signup email\n- `token_reset` - Reset token from password reset email\n\n## 📝 Notes\n\n- All tokens are logged to console when generated\n- Verification tokens expire in 24 hours\n- Reset tokens expire in 15 minutes\n- Check application logs for generated tokens",
+		"description": "# 🚀 Full Stack Auth API Collection\n\nThis collection contains authentication, profile, email verification and password reset endpoints.\n\n## 📋 Endpoints\n\n### Authentication\n- **POST /api/auth/signup** - Register a new user (sends verification email)\n- **GET /api/auth/verify** - Verify email using token from email link\n- **POST /api/auth/login** - Login with email and password\n- **GET /api/auth/isAuthenticated** - Check if user is authenticated\n\n### Profile\n- **GET /api/profile/me** - Get current user's profile\n- **PUT /api/profile/me** - Update current user's profile (name)\n\n### Password Reset\n- **POST /api/auth/request-password-reset** - Request password reset (sends reset link email)\n- **POST /api/auth/reset-password** - Reset password using token\n\n## 🔧 Environment Variables\n\nSet these variables in your Postman environment:\n- `base_url` - Base URL of your API (e.g., http://localhost:8080)\n- `token_verification` - Verification token from signup email\n- `token_reset` - Reset token from password reset email\n\n## 📝 Notes\n\n- All tokens are logged to console when generated\n- Verification tokens expire in 24 hours\n- Reset tokens expire in 15 minutes\n- Check application logs for generated tokens",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "38428231"
 	},
@@ -52,7 +52,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/auth/register",
+							"raw": "{{base_url}}/api/v1/auth/signup",
 							"host": [
 								"{{base_url}}"
 							],
@@ -60,7 +60,7 @@
 								"api",
 								"v1",
 								"auth",
-								"register"
+								"signup"
 							]
 						},
 						"description": "Register a new user account.\n\n**Request Body:**\n- `name` (string, required): User's full name\n- `email` (string, required): User's email address\n- `password` (string, required): User's password\n\n**Response:**\n- Status: 201 Created\n- Body: User profile data including userId, name, email, and isAccountVerified (false)\n\n**What happens:**\n1. User account is created\n2. Verification token is generated and logged to console\n3. Verification email is sent with link: `${app.url}/api/auth/verify?token=<token>`\n\n**Example Response:**\n```json\n{\n    \"userId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"isAccountVerified\": false\n}\n```"
@@ -280,6 +280,88 @@
 				}
 			],
 			"description": "Authentication endpoints"
+		},
+		{
+			"name": "Profile",
+			"item": [
+				{
+					"name": "Get My Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"profile",
+								"me"
+							]
+						},
+						"description": "Get current authenticated user's profile.\n\n**Headers:**\n- `Authorization: Bearer <token>`\n\n**Response:**\n```json\n{\n  \"userId\": \"...\",\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"isAccountVerified\": true\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Update My Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Name\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"profile",
+								"me"
+							]
+						},
+						"description": "Update current user's profile. Currently supports updating \n- `name`\n\n**Headers:**\n- `Authorization: Bearer <token>`\n- `Content-Type: application/json`\n\n**Request Body:**\n```json\n{\n  \"name\": \"Updated Name\"\n}\n```\n\n**Response:** Returns updated profile."
+					},
+					"response": []
+				}
+			],
+			"description": "Profile endpoints"
 		},
 		{
 			"name": "Password Reset",

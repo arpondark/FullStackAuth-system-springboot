@@ -1,4 +1,4 @@
-package com.arpon007.FullStackAuth.Io;
+package com.arpon007.FullStackAuth.Io.Profile;
 
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;

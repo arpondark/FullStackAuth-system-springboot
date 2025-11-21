@@ -1,11 +1,12 @@
 package com.arpon007.FullStackAuth.Controller;
 
 import com.arpon007.FullStackAuth.Entity.UserEntity;
-import com.arpon007.FullStackAuth.Io.AuthRequest;
-import com.arpon007.FullStackAuth.Io.AuthResponse;
-import com.arpon007.FullStackAuth.Io.ResetPasswordRequest;
-import com.arpon007.FullStackAuth.Service.AppUserDetaisService;
-import com.arpon007.FullStackAuth.Service.ProfileService;
+import com.arpon007.FullStackAuth.Io.Auth.AuthRequest;
+import com.arpon007.FullStackAuth.Io.Auth.AuthResponse;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileResponse;
+import com.arpon007.FullStackAuth.Service.User.AppUserDetaisService;
+import com.arpon007.FullStackAuth.Service.Profile.ProfileService;
 import com.arpon007.FullStackAuth.Util.JwtUtil;
 import com.arpon007.FullStackAuth.repository.UserRepository;
 import jakarta.validation.Valid;
@@ -18,7 +19,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -236,10 +236,10 @@ public class AuthController {
      * @return ResponseEntity with signup cookie + response body containing token
      */
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@Valid @RequestBody com.arpon007.FullStackAuth.Io.ProfileRequest request) {
+    public ResponseEntity<?> signup(@Valid @RequestBody ProfileRequest request) {
         try {
             // Create the user profile (triggers verification email)
-            com.arpon007.FullStackAuth.Io.ProfileResponse profileResponse = profileService.createProfile(request);
+            ProfileResponse profileResponse = profileService.createProfile(request);
 
             // Generate temporary signup JWT token (24-hour expiration)
             String signupToken = profileService.generateSignupToken(request.getEmail());

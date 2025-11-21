@@ -1,7 +1,8 @@
-package com.arpon007.FullStackAuth.Service;
+package com.arpon007.FullStackAuth.Service.Profile;
 
-import com.arpon007.FullStackAuth.Io.ProfileRequest;
-import com.arpon007.FullStackAuth.Io.ProfileResponse;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileUpdateRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileResponse;
 
 public interface ProfileService {
     ProfileResponse createProfile(ProfileRequest request);
@@ -51,4 +52,6 @@ public interface ProfileService {
      * @throws IllegalStateException if account is already verified
      */
     void resendVerificationEmail(String email);
+
+    ProfileResponse updateProfile(String email, ProfileUpdateRequest request);
 }

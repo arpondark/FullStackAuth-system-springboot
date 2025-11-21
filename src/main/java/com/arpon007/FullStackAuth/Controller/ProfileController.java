@@ -1,21 +1,16 @@
 package com.arpon007.FullStackAuth.Controller;
 
 
-import com.arpon007.FullStackAuth.Io.ProfileRequest;
-import com.arpon007.FullStackAuth.Io.ProfileResponse;
-import com.arpon007.FullStackAuth.Service.EmailService;
-import com.arpon007.FullStackAuth.Service.ProfileService;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileUpdateRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileResponse;
+import com.arpon007.FullStackAuth.Service.Email.EmailService;
+import com.arpon007.FullStackAuth.Service.Profile.ProfileService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.annotation.CurrentSecurityContext;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.springframework.http.HttpStatus.CREATED;
 
@@ -48,26 +43,11 @@ public class ProfileController {
     private final ProfileService profileService;
     private final EmailService emailService;
 
-    /**
-     * Test endpoint - requires authentication.
-     * Use this to verify JWT is working correctly.
-     *
-     * How to test:
-     * 1. Login: POST /api/v1.1/auth/login with credentials
-     * 2. Copy the token from response
-     * 3. Call this endpoint with: Authorization: Bearer <token>
-     * 4. Should return: { "message": "Hello, authenticated user!" }
-     *
-     * @param email from SecurityContext (set by JwtRequestFilter)
-     * @return success message
-     */
+
     @GetMapping("/test")
-    public ResponseEntity<?> test(@CurrentSecurityContext(expression = "authentication?.name") String email) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Hello, authenticated user!");
-        response.put("email", email);
-        response.put("timestamp", System.currentTimeMillis());
-        return ResponseEntity.ok(response);
+    public String test() {
+
+        return "ok Running";
     }
 
     /**
@@ -89,9 +69,16 @@ public class ProfileController {
 //        response.put("message", "✅ JWT Cookie is working! You are authenticated.");
 //        return ResponseEntity.ok(response);
 //    }
-    @GetMapping("/api/v1/profile/me")
+    @GetMapping("/profile/me")
     public ProfileResponse getCurrentUser(@CurrentSecurityContext(expression = "authentication?.name") String email) {
         return profileService.getProfile(email);
+    }
+
+    @PutMapping("/profile/me")
+    public ProfileResponse updateCurrentUser(
+            @CurrentSecurityContext(expression = "authentication?.name") String email,
+            @Valid @RequestBody ProfileUpdateRequest request) {
+        return profileService.updateProfile(email, request);
     }
 
 }
