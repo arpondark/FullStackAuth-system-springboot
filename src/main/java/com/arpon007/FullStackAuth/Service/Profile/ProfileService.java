@@ -3,6 +3,10 @@ package com.arpon007.FullStackAuth.Service.Profile;
 import com.arpon007.FullStackAuth.Io.Profile.ProfileUpdateRequest;
 import com.arpon007.FullStackAuth.Io.Profile.ProfileRequest;
 import com.arpon007.FullStackAuth.Io.Profile.ProfileResponse;
+import com.arpon007.FullStackAuth.Io.Profile.ChangePasswordRequest;
+import com.arpon007.FullStackAuth.Io.Profile.VerifyChangePasswordRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ChangeEmailRequest;
+import com.arpon007.FullStackAuth.Io.Profile.VerifyChangeEmailRequest;
 
 public interface ProfileService {
     ProfileResponse createProfile(ProfileRequest request);
@@ -13,6 +17,11 @@ public interface ProfileService {
     void resetPassword(String email, String otp, String newPassword);
     void resetPasswordByToken(String token, String newPassword);
     void verifyEmailByToken(String token);
+
+    void initiateChangePassword(String email, ChangePasswordRequest request);
+    void completeChangePassword(String email, VerifyChangePasswordRequest request);
+    void initiateChangeEmail(String email, ChangeEmailRequest request);
+    void completeChangeEmail(String email, VerifyChangeEmailRequest request);
 
     String getLoggedinUserId(String email);
 

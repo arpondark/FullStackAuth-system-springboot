@@ -49,6 +49,7 @@ public class UserEntity {
     private String resetOtp;
     private Long resetOtpExpireAt;
     private Boolean isAccountVerified;
+    private String pendingEmail;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

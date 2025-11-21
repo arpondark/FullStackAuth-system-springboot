@@ -351,20 +351,6 @@
 							],
 							"path": [
 								"api",
-								"v1",
-								"profile",
-								"me"
-							]
-						},
-						"description": "Update current user's profile. Currently supports updating \n- `name`\n\n**Headers:**\n- `Authorization: Bearer <token>`\n- `Content-Type: application/json`\n\n**Request Body:**\n```json\n{\n  \"name\": \"Updated Name\"\n}\n```\n\n**Response:** Returns updated profile."
-					},
-					"response": []
-				}
-			],
-			"description": "Profile endpoints"
-		},
-		{
-			"name": "Password Reset",
 			"item": [
 				{
 					"name": "Request Password Reset",

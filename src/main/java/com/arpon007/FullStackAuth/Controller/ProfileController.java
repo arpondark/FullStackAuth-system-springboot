@@ -3,7 +3,13 @@ package com.arpon007.FullStackAuth.Controller;
 
 import com.arpon007.FullStackAuth.Io.Profile.ProfileUpdateRequest;
 import com.arpon007.FullStackAuth.Io.Profile.ProfileRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileUpdateRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ProfileRequest;
 import com.arpon007.FullStackAuth.Io.Profile.ProfileResponse;
+import com.arpon007.FullStackAuth.Io.Profile.ChangePasswordRequest;
+import com.arpon007.FullStackAuth.Io.Profile.VerifyChangePasswordRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ChangeEmailRequest;
+import com.arpon007.FullStackAuth.Io.Profile.VerifyChangeEmailRequest;
 import com.arpon007.FullStackAuth.Service.Email.EmailService;
 import com.arpon007.FullStackAuth.Service.Profile.ProfileService;
 import jakarta.validation.Valid;
@@ -79,6 +85,34 @@ public class ProfileController {
             @CurrentSecurityContext(expression = "authentication?.name") String email,
             @Valid @RequestBody ProfileUpdateRequest request) {
         return profileService.updateProfile(email, request);
+    }
+
+    @PostMapping("/profile/change-password/init")
+    public void initiateChangePassword(
+            @CurrentSecurityContext(expression = "authentication?.name") String email,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        profileService.initiateChangePassword(email, request);
+    }
+
+    @PostMapping("/profile/change-password/verify")
+    public void completeChangePassword(
+            @CurrentSecurityContext(expression = "authentication?.name") String email,
+            @Valid @RequestBody VerifyChangePasswordRequest request) {
+        profileService.completeChangePassword(email, request);
+    }
+
+    @PostMapping("/profile/change-email/init")
+    public void initiateChangeEmail(
+            @CurrentSecurityContext(expression = "authentication?.name") String email,
+            @Valid @RequestBody ChangeEmailRequest request) {
+        profileService.initiateChangeEmail(email, request);
+    }
+
+    @PostMapping("/profile/change-email/verify")
+    public void completeChangeEmail(
+            @CurrentSecurityContext(expression = "authentication?.name") String email,
+            @Valid @RequestBody VerifyChangeEmailRequest request) {
+        profileService.completeChangeEmail(email, request);
     }
 
 }
