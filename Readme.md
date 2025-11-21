@@ -219,13 +219,10 @@ All endpoints are prefixed with `/api/v1`
 |--------|----------|-------------|
 | `GET` | `/profile/me` | Get current user details |
 | `PUT` | `/profile/me` | Update profile |
-
-### Admin (Protected - Admin Only)
-*Requires `ADMIN` role*
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/admin/test` | Verify admin access |
+| `POST` | `/profile/change-password/init` | Initiate password change (sends OTP) |
+| `POST` | `/profile/change-password/verify` | Verify OTP & update password |
+| `POST` | `/profile/change-email/init` | Initiate email change (sends OTP to new email) |
+| `POST` | `/profile/change-email/verify` | Verify OTP & update email |
 
 ---
 

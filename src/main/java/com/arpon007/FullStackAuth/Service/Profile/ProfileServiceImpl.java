@@ -5,6 +5,11 @@ import com.arpon007.FullStackAuth.Entity.UserEntity;
 import com.arpon007.FullStackAuth.Io.Profile.ProfileUpdateRequest;
 import com.arpon007.FullStackAuth.Io.Profile.ProfileRequest;
 import com.arpon007.FullStackAuth.Io.Profile.ProfileResponse;
+import com.arpon007.FullStackAuth.Io.Profile.ChangePasswordRequest;
+import com.arpon007.FullStackAuth.Io.Profile.VerifyChangePasswordRequest;
+import com.arpon007.FullStackAuth.Io.Profile.ChangeEmailRequest;
+import com.arpon007.FullStackAuth.Io.Profile.VerifyChangeEmailRequest;
+import java.util.concurrent.ThreadLocalRandom;
 import com.arpon007.FullStackAuth.Service.Email.EmailService;
 import com.arpon007.FullStackAuth.Util.JwtUtil;
 import com.arpon007.FullStackAuth.repository.UserRepository;
@@ -337,5 +342,93 @@ public class ProfileServiceImpl implements ProfileService {
 
         // Send verification link email
         emailService.sendVerificationLinkEmail(email, verificationToken);
+    }
+
+    @Override
+    public void initiateChangePassword(String email, ChangePasswordRequest request) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid old password");
+        }
+
+        String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
+        long expiryTime = System.currentTimeMillis() + (15 * 60 * 1000); // 15 minutes
+
+        user.setResetOtp(otp);
+        user.setResetOtpExpireAt(expiryTime);
+        userRepository.save(user);
+
+        log.info("Change Password OTP for {}: {}", email, otp);
+        emailService.sendResetOtpEmail(email, otp);
+    }
+
+    @Override
+    public void completeChangePassword(String email, VerifyChangePasswordRequest request) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (user.getResetOtp() == null || !user.getResetOtp().equals(request.getOtp())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid OTP");
+        }
+
+        if (user.getResetOtpExpireAt() < System.currentTimeMillis()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP has expired");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setResetOtp(null);
+        user.setResetOtpExpireAt(0L);
+        userRepository.save(user);
+    }
+
+    @Override
+    public void initiateChangeEmail(String email, ChangeEmailRequest request) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid password");
+        }
+
+        if (userRepository.existsByEmail(request.getNewEmail())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
+        }
+
+        String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
+        long expiryTime = System.currentTimeMillis() + (15 * 60 * 1000); // 15 minutes
+
+        user.setPendingEmail(request.getNewEmail());
+        user.setVerifyOtp(otp);
+        user.setVerifyOtpExpireAt(expiryTime);
+        userRepository.save(user);
+
+        log.info("Change Email OTP for {} (sent to {}): {}", email, request.getNewEmail(), otp);
+        emailService.sendVerificationOtpEmail(request.getNewEmail(), otp);
+    }
+
+    @Override
+    public void completeChangeEmail(String email, VerifyChangeEmailRequest request) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (user.getVerifyOtp() == null || !user.getVerifyOtp().equals(request.getOtp())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid OTP");
+        }
+
+        if (user.getVerifyOtpExpireAt() < System.currentTimeMillis()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP has expired");
+        }
+
+        if (user.getPendingEmail() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No pending email change found");
+        }
+
+        user.setEmail(user.getPendingEmail());
+        user.setPendingEmail(null);
+        user.setVerifyOtp(null);
+        user.setVerifyOtpExpireAt(0L);
+        userRepository.save(user);
     }
 }
