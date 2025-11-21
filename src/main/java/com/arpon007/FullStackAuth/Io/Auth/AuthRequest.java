@@ -1,4 +1,4 @@
-package com.arpon007.FullStackAuth.Io;
+package com.arpon007.FullStackAuth.Io.Auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

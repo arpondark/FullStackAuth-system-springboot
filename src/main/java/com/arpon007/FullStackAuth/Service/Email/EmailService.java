@@ -1,4 +1,4 @@
-package com.arpon007.FullStackAuth.Service;
+package com.arpon007.FullStackAuth.Service.Email;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

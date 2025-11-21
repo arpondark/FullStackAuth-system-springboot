@@ -1,16 +1,19 @@
-package com.arpon007.FullStackAuth.Service;
+package com.arpon007.FullStackAuth.Service.User;
 
 import com.arpon007.FullStackAuth.Entity.UserEntity;
 import com.arpon007.FullStackAuth.repository.UserRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * AppUserDetaisService bridges the database (UserEntity) with Spring Security.
@@ -36,6 +39,10 @@ public class AppUserDetaisService implements UserDetailsService {
         UserEntity existingUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        return new User(existingUser.getEmail(), existingUser.getPassword(), new ArrayList<>());
+        List<GrantedAuthority> authorities = existingUser.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
+                .collect(Collectors.toList());
+
+        return new User(existingUser.getEmail(), existingUser.getPassword(), authorities);
     }
 }

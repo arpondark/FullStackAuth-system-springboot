@@ -1,6 +1,6 @@
 package com.arpon007.FullStackAuth.Filter;
 
-import com.arpon007.FullStackAuth.Service.AppUserDetaisService;
+import com.arpon007.FullStackAuth.Service.User.AppUserDetaisService;
 import com.arpon007.FullStackAuth.Util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -160,7 +160,6 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             "/auth/send-reset-otp",
             "/auth/reset-password",
             "/auth/logout",
-            "/auth/isAuthenticated",
             "/auth/request-password-reset",
             "/auth/resend-verification",
             "/test"

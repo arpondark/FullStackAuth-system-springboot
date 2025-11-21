@@ -2,7 +2,7 @@ package com.arpon007.FullStackAuth.config;
 
 
 import com.arpon007.FullStackAuth.Filter.JwtRequestFilter;
-import com.arpon007.FullStackAuth.Service.AppUserDetaisService;
+import com.arpon007.FullStackAuth.Service.User.AppUserDetaisService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +37,7 @@ import java.util.List;
 @Configuration
 @RequiredArgsConstructor
 @Data
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 public class SecurityConfig {
     private final AppUserDetaisService appUserDetaisService;
     private final JwtRequestFilter jwtRequestFilter;
