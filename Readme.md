@@ -183,10 +183,33 @@ src/main/java/com/arpon007/FullStackAuth
 ## 🔮 Future Roadmap
 
 - [ ] **Refresh Tokens**: For long-lived sessions without re-login.
-- [ ] **OAuth2 Login**: Sign in with Google/GitHub.
+- [x] **OAuth2 Login**: Sign in with Google.
 - [ ] **Two-Factor Auth (2FA)**: Extra security layer.
 - [ ] **Rate Limiting**: Prevent abuse of APIs.
 - [ ] **Audit Logs**: Track important security events.
+
+---
+
+## 🌐 Google OAuth2 Setup
+
+1.  **Create Google Cloud Project**: Go to [Google Cloud Console](https://console.cloud.google.com/).
+2.  **Enable APIs**: Enable "Google People API" or just "Google+ API" (legacy) - actually just "Google Identity" setup.
+3.  **Create Credentials**:
+    *   Create OAuth Client ID.
+    *   Application Type: Web Application.
+    *   Authorized Redirect URIs: `http://localhost:8080/api/v1/login/oauth2/code/google`
+4.  **Update .env**:
+    ```properties
+    GOOGLE_CLIENT_ID=your-client-id
+    GOOGLE_CLIENT_SECRET=your-client-secret
+    ```
+
+### OAuth2 Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/oauth2/authorization/google` | Initiate Google Login (Browser) |
+| `GET` | `/api/v1/login/oauth2/code/google` | Callback URL (Handled by Spring Security) |
+
 
 ---
 

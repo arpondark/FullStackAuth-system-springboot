@@ -277,6 +277,28 @@
 						"description": "Check if current user is authenticated.\n\n**Headers:**\n- `Authorization: Bearer <token>` (optional, can use cookie instead)\n\n**Response:**\n```json\n{\n    \"authenticated\": true,\n    \"email\": \"john.doe@example.com\"\n}\n```"
 					},
 					"response": []
+				},
+				{
+					"name": "Google Login",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/oauth2/authorization/google",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"oauth2",
+								"authorization",
+								"google"
+							]
+						},
+						"description": "Initiate Google OAuth2 Login.\n\n**Usage:**\n- Open this URL in a browser.\n- It redirects to Google for authentication.\n- On success, it redirects back to the frontend with a JWT token: `http://localhost:5173/oauth2/redirect?token=<jwt_token>`"
+					},
+					"response": []
 				}
 			],
 			"description": "Authentication endpoints"
@@ -351,6 +373,20 @@
 							],
 							"path": [
 								"api",
+								"v1",
+								"profile",
+								"me"
+							]
+						},
+						"description": "Update current authenticated user's profile.\n\n**Headers:**\n- `Authorization: Bearer <token>`\n\n**Request Body:**\n- `name` (string, optional): New name\n\n**Response:**\n```json\n{\n  \"userId\": \"...\",\n  \"name\": \"Updated Name\",\n  \"email\": \"john.doe@example.com\",\n  \"isAccountVerified\": true\n}\n```"
+					},
+					"response": []
+				}
+			],
+			"description": "Profile management endpoints"
+		},
+		{
+			"name": "Password Reset",
 			"item": [
 				{
 					"name": "Request Password Reset",
