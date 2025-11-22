@@ -42,6 +42,7 @@ public class SecurityConfig {
     private final AppUserDetaisService appUserDetaisService;
     private final JwtRequestFilter jwtRequestFilter;
     private final CustomAuhtenticationEntryPoint customAuhtenticationEntryPoint;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     /**
      * filterChain() configures the security filter chain for HTTP requests.
@@ -76,7 +77,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .logout(AbstractHttpConfigurer::disable)
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuhtenticationEntryPoint));
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuhtenticationEntryPoint))
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2LoginSuccessHandler));
 
         return http.build();
 

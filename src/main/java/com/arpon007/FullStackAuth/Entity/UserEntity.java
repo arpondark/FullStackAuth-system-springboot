@@ -51,6 +51,10 @@ public class UserEntity {
     private Boolean isAccountVerified;
     private String pendingEmail;
 
+    @Enumerated(EnumType.STRING)
+    private AuthProvider authProvider;
+    private String providerId;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "tbl_user_roles",
