@@ -3,7 +3,7 @@
 
 A robust Spring Boot authentication system with JWT, Email Verification, and Role-Based Access Control.
 
-## 🚀 Quick Setup
+## Quick Setup
 
 ### 1. Database
 Create a MySQL database named `springdb`:
@@ -27,7 +27,7 @@ Server starts at: `http://localhost:8080`
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 src/main/java/com/arpon007/FullStackAuth
@@ -41,7 +41,7 @@ src/main/java/com/arpon007/FullStackAuth
 └── Io/              # DTOs (Request/Response objects)
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### Component Overview
 
@@ -96,7 +96,7 @@ src/main/java/com/arpon007/FullStackAuth
 
 ---
 
-## 🔄 System Flow
+## System Flow
 
 ### 1. Login Flow (Step-by-Step)
 
@@ -180,7 +180,7 @@ src/main/java/com/arpon007/FullStackAuth
 
 ---
 
-## 🔮 Future Roadmap
+## Future Roadmap
 
 - [ ] **Refresh Tokens**: For long-lived sessions without re-login.
 - [x] **OAuth2 Login**: Sign in with Google.
@@ -190,7 +190,7 @@ src/main/java/com/arpon007/FullStackAuth
 
 ---
 
-## 🌐 Google OAuth2 Setup
+## Google OAuth2 Setup
 
 1.  **Create Google Cloud Project**: Go to [Google Cloud Console](https://console.cloud.google.com/).
 2.  **Enable APIs**: Enable "Google People API" or just "Google+ API" (legacy) - actually just "Google Identity" setup.
@@ -213,7 +213,7 @@ src/main/java/com/arpon007/FullStackAuth
 
 ---
 
-## 🧪 Testing with Postman
+## Testing with Postman
 
 **Step 1:** Locate the file `Auth rest apis.postman_collection.json` in the project root.
 **Step 2:** Import this file into Postman.
@@ -221,7 +221,7 @@ src/main/java/com/arpon007/FullStackAuth
 
 ---
 
-## 📡 API Endpoints
+## API Endpoints
 
 All endpoints are prefixed with `/api/v1`
 
@@ -247,9 +247,16 @@ All endpoints are prefixed with `/api/v1`
 | `POST` | `/profile/change-email/init` | Initiate email change (sends OTP to new email) |
 | `POST` | `/profile/change-email/verify` | Verify OTP & update email |
 
+### Admin Operations (Protected)
+*Requires `Authorization: Bearer <token>` with `ADMIN` role*
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/admin/users` | Create new Admin or User account |
+
 ---
 
-## 🔑 Role Configuration
+## Role Configuration
 New users are `USER` by default. To make an admin:
 1. Register a user.
 2. Run SQL: `INSERT INTO tbl_user_roles (user_id, role_id) VALUES (1, 2);` (Adjust IDs as needed).

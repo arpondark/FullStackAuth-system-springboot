@@ -11,16 +11,24 @@ import com.arpon007.FullStackAuth.Io.Profile.VerifyChangeEmailRequest;
 public interface ProfileService {
     ProfileResponse createProfile(ProfileRequest request);
 
+    ProfileResponse createUserByAdmin(com.arpon007.FullStackAuth.Io.Admin.AdminCreateUserRequest request);
+
     ProfileResponse getProfile(String email);
 
     void sendResetOpt(String email);
+
     void resetPassword(String email, String otp, String newPassword);
+
     void resetPasswordByToken(String token, String newPassword);
+
     void verifyEmailByToken(String token);
 
     void initiateChangePassword(String email, ChangePasswordRequest request);
+
     void completeChangePassword(String email, VerifyChangePasswordRequest request);
+
     void initiateChangeEmail(String email, ChangeEmailRequest request);
+
     void completeChangeEmail(String email, VerifyChangeEmailRequest request);
 
     String getLoggedinUserId(String email);
@@ -58,7 +66,7 @@ public interface ProfileService {
      *
      * @param email the user's email address
      * @throws UsernameNotFoundException if user not found
-     * @throws IllegalStateException if account is already verified
+     * @throws IllegalStateException     if account is already verified
      */
     void resendVerificationEmail(String email);
 

@@ -30,34 +30,49 @@ import java.util.UUID;
  * ProfileServiceImpl handles user profile operations including registration,
  * email verification, and password reset.
  * 
- * <p><b>Current Implementation (Token-Based):</b></p>
+ * <p>
+ * <b>Current Implementation (Token-Based):</b>
+ * </p>
  * <ul>
- *   <li><b>Email Verification:</b> Uses UUID tokens sent via email links</li>
- *   <li><b>Password Reset:</b> Uses UUID tokens sent via email links</li>
- *   <li><b>Token Logging:</b> All generated tokens are logged to console</li>
+ * <li><b>Email Verification:</b> Uses UUID tokens sent via email links</li>
+ * <li><b>Password Reset:</b> Uses UUID tokens sent via email links</li>
+ * <li><b>Token Logging:</b> All generated tokens are logged to console</li>
  * </ul>
  * 
- * <p><b>Email Verification Flow:</b></p>
+ * <p>
+ * <b>Email Verification Flow:</b>
+ * </p>
  * <ol>
- *   <li>User signs up → Verification token (UUID) generated automatically</li>
- *   <li>Token logged: <code>log.info("Token for {}: {}", email, token)</code></li>
- *   <li>Verification link sent: <code>${app.url}/api/auth/verify?token=&lt;token&gt;</code></li>
- *   <li>User clicks link → Account activated</li>
+ * <li>User signs up → Verification token (UUID) generated automatically</li>
+ * <li>Token logged:
+ * <code>log.info("Token for {}: {}", email, token)</code></li>
+ * <li>Verification link sent:
+ * <code>${app.url}/api/auth/verify?token=&lt;token&gt;</code></li>
+ * <li>User clicks link → Account activated</li>
  * </ol>
  * 
- * <p><b>Password Reset Flow:</b></p>
+ * <p>
+ * <b>Password Reset Flow:</b>
+ * </p>
  * <ol>
- *   <li>User requests reset → Reset token (UUID) generated</li>
- *   <li>Token logged: <code>log.info("Token for {}: {}", email, token)</code></li>
- *   <li>Reset link sent: <code>${app.url}/api/auth/reset-password?token=&lt;token&gt;</code></li>
- *   <li>User clicks link and sets new password</li>
+ * <li>User requests reset → Reset token (UUID) generated</li>
+ * <li>Token logged:
+ * <code>log.info("Token for {}: {}", email, token)</code></li>
+ * <li>Reset link sent:
+ * <code>${app.url}/api/auth/reset-password?token=&lt;token&gt;</code></li>
+ * <li>User clicks link and sets new password</li>
  * </ol>
  * 
- * <p><b>Deprecated Methods (Commented Out):</b></p>
+ * <p>
+ * <b>Deprecated Methods (Commented Out):</b>
+ * </p>
  * <ul>
- *   <li><code>sentOtp()</code> - Old OTP-based verification (replaced by token-based)</li>
- *   <li><code>verifyOtp()</code> - Old OTP verification (replaced by token-based)</li>
- *   <li><code>resetPassword(String email, String otp, String newPassword)</code> - Old OTP-based reset (kept for backward compatibility)</li>
+ * <li><code>sentOtp()</code> - Old OTP-based verification (replaced by
+ * token-based)</li>
+ * <li><code>verifyOtp()</code> - Old OTP verification (replaced by
+ * token-based)</li>
+ * <li><code>resetPassword(String email, String otp, String newPassword)</code>
+ * - Old OTP-based reset (kept for backward compatibility)</li>
  * </ul>
  * 
  * @author Arpon007
@@ -68,7 +83,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Slf4j
 public class ProfileServiceImpl implements ProfileService {
-
 
     private final UserRepository userRepository;
     private final EmailService emailService;
@@ -86,11 +100,12 @@ public class ProfileServiceImpl implements ProfileService {
             // If user exists but not verified, provide helpful message
             if (existingUser.getIsAccountVerified() == null || !existingUser.getIsAccountVerified()) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Email already registered but not verified. Please check your email or use the resend verification endpoint.");
+                        "Email already registered but not verified. Please check your email or use the resend verification endpoint.");
             }
 
             // If user exists and is verified
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists and is verified. Please login instead.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Email already exists and is verified. Please login instead.");
         }
 
         // Create new user
@@ -110,6 +125,42 @@ public class ProfileServiceImpl implements ProfileService {
 
         // Send verification link email
         emailService.sendVerificationLinkEmail(request.getEmail(), verificationToken);
+
+        return convertToUserResponse(newProfile);
+    }
+
+    @Override
+    public ProfileResponse createUserByAdmin(com.arpon007.FullStackAuth.Io.Admin.AdminCreateUserRequest request) {
+        // Check if user already exists
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+        }
+
+        // Determine Role
+        RoleEntity assignedRole;
+        if ("ADMIN".equalsIgnoreCase(request.getRole())) {
+            assignedRole = roleRepository.findByName(RoleName.ADMIN)
+                    .orElseGet(() -> roleRepository.save(RoleEntity.builder().name(RoleName.ADMIN).build()));
+        } else {
+            assignedRole = roleRepository.findByName(RoleName.USER)
+                    .orElseGet(() -> roleRepository.save(RoleEntity.builder().name(RoleName.USER).build()));
+        }
+
+        // Create new user (automatically verified since created by admin)
+        UserEntity newProfile = UserEntity.builder()
+                .email(request.getEmail())
+                .userId(UUID.randomUUID().toString())
+                .name(request.getName())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .isAccountVerified(true)
+                .resetOtpExpireAt(0L)
+                .verifyOtp(null)
+                .verifyOtpExpireAt(0L)
+                .resetOtp(null)
+                .roles(new java.util.HashSet<>(java.util.List.of(assignedRole)))
+                .build();
+
+        newProfile = userRepository.save(newProfile);
 
         return convertToUserResponse(newProfile);
     }
@@ -139,16 +190,16 @@ public class ProfileServiceImpl implements ProfileService {
 
         // Generate reset token
         String resetToken = UUID.randomUUID().toString();
-        
+
         // Expire time - 15 minutes
         long expireTime = System.currentTimeMillis() + (15 * 60 * 1000);
         existingUser.setResetOtpExpireAt(expireTime);
         existingUser.setResetOtp(resetToken);
         userRepository.save(existingUser);
-        
+
         // Log the token
         log.info("Token for {}: {}", email, resetToken);
-        
+
         // Send reset link email
         emailService.sendPasswordResetLinkEmail(email, resetToken);
     }
@@ -175,29 +226,29 @@ public class ProfileServiceImpl implements ProfileService {
         existingUser.setResetOtpExpireAt(0L);
         userRepository.save(existingUser);
     }
-    
+
     public void resetPasswordByToken(String token, String newPassword) {
         UserEntity existingUser = userRepository.findByResetOtp(token)
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid or expired token"));
-        
+
         if (existingUser.getResetOtpExpireAt() < System.currentTimeMillis()) {
             throw new RuntimeException("Token has expired");
         }
-        
+
         existingUser.setPassword(passwordEncoder.encode(newPassword));
         existingUser.setResetOtp(null);
         existingUser.setResetOtpExpireAt(0L);
         userRepository.save(existingUser);
     }
-    
+
     public void verifyEmailByToken(String token) {
         UserEntity existingUser = userRepository.findByVerifyOtp(token)
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid or expired token"));
-        
+
         if (existingUser.getVerifyOtpExpireAt() < System.currentTimeMillis()) {
             throw new RuntimeException("Token has expired");
         }
-        
+
         existingUser.setIsAccountVerified(true);
         existingUser.setVerifyOtp(null);
         existingUser.setVerifyOtpExpireAt(0L);
@@ -209,60 +260,68 @@ public class ProfileServiceImpl implements ProfileService {
      * This method is no longer used. Email verification now happens automatically
      * during signup with token-based links.
      * 
-     * @deprecated Email verification is now automatic on signup. Use token-based verification instead.
-     * @see #createProfile(ProfileRequest) - Automatically generates verification token
+     * @deprecated Email verification is now automatic on signup. Use token-based
+     *             verification instead.
+     * @see #createProfile(ProfileRequest) - Automatically generates verification
+     *      token
      * @see #verifyEmailByToken(String) - Token-based verification
      */
     /*
-    @Override
-    public void sentOtp(String email) {
-        UserEntity existingUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
-        if (existingUser.getIsAccountVerified() != null && existingUser.getIsAccountVerified()) {
-            return;
-            //throw new RuntimeException("Account already verified");
-        }
-        String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
-        long expiryTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000); //expire time set here
-
-        existingUser.setVerifyOtp(otp);
-        existingUser.setVerifyOtpExpireAt(expiryTime);
-        userRepository.save(existingUser);
-        try {
-            emailService.sendVerificationOtpEmail(existingUser.getEmail(), otp);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-    */
+     * @Override
+     * public void sentOtp(String email) {
+     * UserEntity existingUser = userRepository.findByEmail(email)
+     * .orElseThrow(() -> new UsernameNotFoundException("User not found: " +
+     * email));
+     * if (existingUser.getIsAccountVerified() != null &&
+     * existingUser.getIsAccountVerified()) {
+     * return;
+     * //throw new RuntimeException("Account already verified");
+     * }
+     * String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000,
+     * 999999));
+     * long expiryTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000);
+     * //expire time set here
+     * 
+     * existingUser.setVerifyOtp(otp);
+     * existingUser.setVerifyOtpExpireAt(expiryTime);
+     * userRepository.save(existingUser);
+     * try {
+     * emailService.sendVerificationOtpEmail(existingUser.getEmail(), otp);
+     * } catch (Exception e) {
+     * e.printStackTrace();
+     * }
+     * 
+     * }
+     */
 
     /**
      * DEPRECATED: Old OTP-based email verification method.
      * This method is no longer used. Email verification now uses token-based links.
      * 
-     * @deprecated Use {@link #verifyEmailByToken(String)} instead for token-based verification
+     * @deprecated Use {@link #verifyEmailByToken(String)} instead for token-based
+     *             verification
      */
     /*
-    @Override
-    public void verifyOtp(String email, String otp) {
-        UserEntity existingUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
-        if (existingUser.getVerifyOtp() == null || !existingUser.getVerifyOtp().equals(otp)) {
-            throw new RuntimeException("Invalid OTP");
-        }
-        if (existingUser.getVerifyOtpExpireAt() < System.currentTimeMillis()) {
-            throw new RuntimeException("OTP has expired");
-        }
-        existingUser.setIsAccountVerified(true);
-        existingUser.setVerifyOtp(null);
-        existingUser.setVerifyOtpExpireAt(0L);
-
-        userRepository.save(existingUser);
-
-    }
-    */
-
+     * @Override
+     * public void verifyOtp(String email, String otp) {
+     * UserEntity existingUser = userRepository.findByEmail(email)
+     * .orElseThrow(() -> new UsernameNotFoundException("User not found: " +
+     * email));
+     * if (existingUser.getVerifyOtp() == null ||
+     * !existingUser.getVerifyOtp().equals(otp)) {
+     * throw new RuntimeException("Invalid OTP");
+     * }
+     * if (existingUser.getVerifyOtpExpireAt() < System.currentTimeMillis()) {
+     * throw new RuntimeException("OTP has expired");
+     * }
+     * existingUser.setIsAccountVerified(true);
+     * existingUser.setVerifyOtp(null);
+     * existingUser.setVerifyOtpExpireAt(0L);
+     * 
+     * userRepository.save(existingUser);
+     * 
+     * }
+     */
 
     @Override
     public String getLoggedinUserId(String email) {

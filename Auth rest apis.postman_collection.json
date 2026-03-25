@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "6c3a5b41-c566-43b5-8acd-977801bdf6c3",
 		"name": "Auth rest apis",
-		"description": "# 🚀 Full Stack Auth API Collection\n\nThis collection contains authentication, profile, email verification and password reset endpoints.\n\n## 📋 Endpoints\n\n### Authentication\n- **POST /api/auth/signup** - Register a new user (sends verification email)\n- **GET /api/auth/verify** - Verify email using token from email link\n- **POST /api/auth/login** - Login with email and password\n- **GET /api/auth/isAuthenticated** - Check if user is authenticated\n\n### Profile\n- **GET /api/profile/me** - Get current user's profile\n- **PUT /api/profile/me** - Update current user's profile (name)\n\n### Password Reset\n- **POST /api/auth/request-password-reset** - Request password reset (sends reset link email)\n- **POST /api/auth/reset-password** - Reset password using token\n\n## 🔧 Environment Variables\n\nSet these variables in your Postman environment:\n- `base_url` - Base URL of your API (e.g., http://localhost:8080)\n- `token_verification` - Verification token from signup email\n- `token_reset` - Reset token from password reset email\n\n## 📝 Notes\n\n- All tokens are logged to console when generated\n- Verification tokens expire in 24 hours\n- Reset tokens expire in 15 minutes\n- Check application logs for generated tokens",
+		"description": "# 🚀 Full Stack Auth API Collection\n\nThis collection contains authentication, profile, email verification and password reset endpoints.\n\n## 📋 Endpoints\n\n### Authentication\n- **POST /api/auth/signup** - Register a new user (sends verification email)\n- **GET /api/auth/verify** - Verify email using token from email link\n- **POST /api/auth/login** - Login with email and password\n- **GET /api/auth/isAuthenticated** - Check if user is authenticated\n\n### Admin\\n- **POST /api/admin/users** - Create new Admin or User account\\n\\n### Profile\n- **GET /api/profile/me** - Get current user's profile\n- **PUT /api/profile/me** - Update current user's profile (name)\n\n### Password Reset\n- **POST /api/auth/request-password-reset** - Request password reset (sends reset link email)\n- **POST /api/auth/reset-password** - Reset password using token\n\n## 🔧 Environment Variables\n\nSet these variables in your Postman environment:\n- `base_url` - Base URL of your API (e.g., http://localhost:8080)\n- `token_verification` - Verification token from signup email\n- `token_reset` - Reset token from password reset email\n\n## 📝 Notes\n\n- All tokens are logged to console when generated\n- Verification tokens expire in 24 hours\n- Reset tokens expire in 15 minutes\n- Check application logs for generated tokens",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "38428231"
 	},
@@ -500,6 +500,57 @@
 				}
 			],
 			"description": "Password reset flow endpoints"
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Create Admin or User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\\n    \\\"name\\\": \\\"New User\\\",\\n    \\\"email\\\": \\\"newuser@example.com\\\",\\n    \\\"password\\\": \\\"securepassword\\\",\\n    \\\"role\\\": \\\"ADMIN\\\"\\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users"
+							]
+						},
+						"description": "Create a new user or admin account.\\n\\n**Headers:**\\n- `Authorization: Bearer <token>` (must have ADMIN role)\\n\\n**Request Body:**\\n- `name` (string, required): User's name\\n- `email` (string, required): User's email\\n- `password` (string, required): User's password (min 6 chars)\\n- `role` (string, required): \\\"ADMIN\\\" or \\\"USER\\\"\\n\\n**Response:**\\n```json\\n{\\n    \\\"success\\\": true,\\n    \\\"message\\\": \\\"User created successfully\\\",\\n    \\\"data\\\": {\\n        \\\"userId\\\": \\\"...\\\",\\n        \\\"name\\\": \\\"New User\\\",\\n        \\\"email\\\": \\\"newuser@example.com\\\",\\n        \\\"isAccountVerified\\\": true\\n    }\\n}\\n```"
+					},
+					"response": []
+				}
+			],
+			"description": "Admin operations endpoints"
 		}
 	],
 	"event": [
